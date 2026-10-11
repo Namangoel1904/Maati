@@ -49,7 +49,9 @@ services:
     region: ohio
     plan: free
     rootDir: frontend
-    buildCommand: npm ci && npm run build
+    # Tailwind's Turbopack loader is a devDependency, so include dev packages
+    # even when Render sets NODE_ENV=production during the build.
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm run start
     envVars:
       - key: NODE_ENV
