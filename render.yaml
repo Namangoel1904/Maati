@@ -3,7 +3,7 @@ services:
     name: maati-api
     runtime: node
     region: ohio
-    plan: 0.5c-512mb
+    plan: free
     rootDir: backend
     buildCommand: npm ci
     startCommand: npm start
@@ -19,29 +19,35 @@ services:
         sync: false
       - key: GOOGLE_MAPS_API_KEY
         sync: false
-      - key: PREDICTOR_HOSTPORT
+      - key: PREDICTOR_BASE_URL
         fromService:
           name: maati-predictor
-          type: pserv
-          property: hostport
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: PREDICTOR_API_TOKEN
+        fromService:
+          name: maati-predictor
+          type: web
+          envVarKey: PREDICTOR_API_TOKEN
 
-  - type: pserv
+  - type: web
     name: maati-predictor
     runtime: python
     region: ohio
     rootDir: backend
-    plan: 2c-8g
-    buildCommand: pip install -r ai/requirements.txt
-    startCommand: gunicorn --workers 1 --threads 1 --bind 0.0.0.0:$PORT ai.tabpfn_predictor:app
+    plan: free
+    buildCommand: pip install -r ai/requirements-lite.txt
+    startCommand: gunicorn --workers 1 --threads 1 --bind 0.0.0.0:$PORT ai.sklearn_predictor:app
+    healthCheckPath: /healthz
     envVars:
-      - key: TABPFN_TOKEN
-        sync: false
+      - key: PREDICTOR_API_TOKEN
+        generateValue: true
 
   - type: web
     name: maati-web
     runtime: node
     region: ohio
-    plan: 0.5c-512mb
+    plan: free
     rootDir: frontend
     buildCommand: npm ci && npm run build
     startCommand: npm run start
@@ -52,4 +58,4 @@ services:
         fromService:
           name: maati-api
           type: web
-          property: hostport
+          envVarKey: RENDER_EXTERNAL_URL

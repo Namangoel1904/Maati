@@ -14,7 +14,7 @@ Maati is a community break companion for people who spend long hours at a comput
 
 - Tracks active screen time in the optional Windows desktop companion and prompts the user when a break is due.
 - Offers three types of break: a daytime nature or seed activity, an evening outing, and a late-night indoor audio break.
-- Uses TabPFN with the Crop Recommendation dataset to estimate crop viability from current temperature and humidity.
+- Includes a TabPFN crop predictor for the sponsor build and a smaller scikit-learn predictor for a temporary free-tier demo, both using the Crop Recommendation dataset.
 - Uses Backboard for structured mission advice and map services for nearby place and transit information.
 - Lets signed-in users save their preferences, accept a mission, record its completion, and share a scrapbook post with the community.
 - Stores accounts, profile data, missions, posts, and related records in PostgreSQL.
@@ -23,7 +23,7 @@ Maati is a community break companion for people who spend long hours at a comput
 
 ```text
 backend/
-  ai/                 Flask TabPFN predictor and AI data scripts
+  ai/                 Flask predictors and AI data scripts
   data/               Crop Recommendation dataset
   db/                 PostgreSQL schema
   server.js           Fastify API
@@ -42,12 +42,12 @@ flowchart LR
   Browser[Next.js web app] -->|/api proxy| API[Fastify API]
   Desktop[Electron companion] --> Browser
   API --> DB[(PostgreSQL)]
-  API --> Predictor[Flask + TabPFN]
+  API --> Predictor[Flask crop predictor]
   API --> Backboard[Backboard advice]
   API --> Maps[Open-Meteo and map services]
 ```
 
-The Next.js server proxies `/api/*` to Fastify. The API handles authentication, profiles, break state, missions, posts, and external service calls. The predictor is a separate Python process so model initialization happens once when that service starts. PostgreSQL schema initialization runs when the API starts.
+The Next.js server proxies `/api/*` to Fastify. The API handles authentication, profiles, break state, missions, posts, and external service calls. The predictor is a separate Python web service; its prediction route requires a shared service token. PostgreSQL schema initialization runs when the API starts.
 
 ## Run locally
 
@@ -82,17 +82,19 @@ The API listens on port `3000` by default. It creates or updates the PostgreSQL 
 
 ### 2. Start the predictor
 
-In a second terminal, create a virtual environment and install the Python dependencies:
+In a second terminal, create a virtual environment and install the lightweight predictor dependencies for a free-demo-style local run:
 
 ```powershell
 cd backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r ai/requirements.txt
-python ai/tabpfn_predictor.py
+pip install -r ai/requirements-lite.txt
+python ai/sklearn_predictor.py
 ```
 
-The predictor reads `backend/data/Crop_recommendation.csv`, prepares a stratified sample, and initializes TabPFN at startup. It listens on port `5000` by default. The first startup can take longer while model weights are downloaded. The API uses this local service automatically; set `PREDICTOR_URL` only if it runs at another address.
+The lightweight predictor reads the full real dataset and trains once at startup. It listens on port `5000` by default. The API uses `http://127.0.0.1:5000/predict` by default; set `PREDICTOR_URL` or `PREDICTOR_BASE_URL` if it runs at another address. This model only uses temperature and humidity, so its score is an experimental crop-recommendation signal, not a calibrated germination probability.
+
+To run the TabPFN sponsor version instead, install `ai/requirements.txt`, configure `TABPFN_TOKEN` in `backend/.env` if requested, and run `python ai/tabpfn_predictor.py`. Its first model download takes longer and needs more memory.
 
 ### 3. Start the web app
 
@@ -139,15 +141,15 @@ Most account and mission routes require a signed-in session.
 
 ## Deploy to Render
 
-The repository includes a Blueprint in [`render.yaml`](render.yaml) for three services: the Fastify API, a private Flask/TabPFN predictor, and the Next.js web app.
+The repository includes a **temporary free-demo Blueprint** in [`render.yaml`](render.yaml) for three free web services: the Fastify API, a lightweight Flask/scikit-learn predictor, and the Next.js web app. The TabPFN predictor remains available in `backend/ai/tabpfn_predictor.py` for the sponsor build; the free Render configuration does not run it.
 
 1. Push this repository to GitHub and create a new Render Blueprint from it.
-2. Configure the required secrets in Render: `DATABASE_URL`, `BACKBOARD_API_KEY`, `GOOGLE_MAPS_API_KEY`, and `TABPFN_TOKEN`.
+2. Configure the required secrets in Render: `DATABASE_URL`, `BACKBOARD_API_KEY`, and `GOOGLE_MAPS_API_KEY`. Render generates the predictor-to-API authentication token.
 3. Render generates `AUTH_SECRET` from the Blueprint. Keep all API keys and database credentials in Render's environment settings, never in frontend variables.
 4. Wait for all services to deploy, then check the API health endpoint and exercise signup, profile setup, mission generation, completion, and posting.
-5. If Render assigns a web URL other than the default in `frontend/main.js`, set `MAATI_WEB_URL` for a local packaged build or update `PRODUCTION_WEB_URL` before building the desktop installer.
+5. The Blueprint connects services using their public HTTPS URLs because free web services can't receive private-network traffic. If Render assigns a web URL other than the default in `frontend/main.js`, set `MAATI_WEB_URL` for a local packaged build or update `PRODUCTION_WEB_URL` before building the desktop installer.
 
-Review [DEPLOYMENT.md](DEPLOYMENT.md) for deployment checks, service sizing, database credential guidance, and desktop installer release considerations. TabPFN model downloads and memory use can affect service startup and cost; confirm the current Render plan and service behavior before public launch.
+Free services sleep after 15 minutes without inbound requests, have limited CPU and memory, and can cold-start slowly. A three-service demo uses 216 instance-hours if all three run continuously for 72 hours, within Render's current 750-hour monthly workspace allowance; usage is shared across the workspace. External monitoring requests may keep them active, but Render can still restart free services. Review [DEPLOYMENT.md](DEPLOYMENT.md) before launch. For the TabPFN sponsor build or a durable production deployment, restore a paid private predictor configuration and confirm current pricing first.
 
 ## Security and prototype notes
 

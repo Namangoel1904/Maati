@@ -5,7 +5,8 @@ const Fastify = require('fastify');
 const { pool, initializeDatabase } = require('./db');
 
 const app = Fastify({ logger: true, trustProxy: true, bodyLimit: 12 * 1024 * 1024 });
-const predictorUrl = process.env.PREDICTOR_URL || (process.env.PREDICTOR_HOSTPORT ? `http://${process.env.PREDICTOR_HOSTPORT}/predict` : 'http://127.0.0.1:5000/predict');
+const predictorBaseUrl = process.env.PREDICTOR_BASE_URL || (process.env.PREDICTOR_HOSTPORT ? `http://${process.env.PREDICTOR_HOSTPORT}` : 'http://127.0.0.1:5000');
+const predictorUrl = process.env.PREDICTOR_URL || `${predictorBaseUrl.replace(/\/$/, '')}/predict`;
 const predictorTimeoutMs = 180_000;
 const backboardUrl = 'https://app.backboard.io/api/threads/messages';
 const sessionCookie = 'maati_session';
@@ -650,7 +651,9 @@ app.post('/api/viability', { preHandler: requireAuth, schema: { body: { type: 'o
   try {
     const { latitude, longitude } = await geocodeLocation(location.trim());
     const weather = await fetchLiveWeather(latitude, longitude);
-    const response = await fetch(predictorUrl, { method: 'POST', headers: { 'content-type': 'application/json' },
+    const predictorHeaders = { 'content-type': 'application/json' };
+    if (process.env.PREDICTOR_API_TOKEN) predictorHeaders.authorization = `Bearer ${process.env.PREDICTOR_API_TOKEN}`;
+    const response = await fetch(predictorUrl, { method: 'POST', headers: predictorHeaders,
       body: JSON.stringify({ seed_type: seedType, current_temp: weather.temperature, current_humidity: weather.humidity }),
       signal: AbortSignal.timeout(predictorTimeoutMs) });
     if (!response.ok) throw new Error(`Prediction service returned HTTP ${response.status}: ${await response.text()}`);
