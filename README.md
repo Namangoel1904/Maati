@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="frontend/public/tree.png" alt="Maati cherry blossom tree" width="280" />
+</p>
+
 # Maati
 
 **A gentle nudge to step away from your screen and spend a little time outside.**
