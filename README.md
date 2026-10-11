@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/public/tree.png" alt="Maati cherry blossom tree" width="280" />
+  <img src="frontend/src/Maati.png" alt="Meet Maati — a cherry blossom tree companion for screen breaks" width="560" />
 </p>
 
 # Maati
