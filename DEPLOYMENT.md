@@ -70,4 +70,4 @@ npm ci
 npm run desktop:win
 ```
 
-The installer is written to `frontend/release/` and is ignored by Git. The desktop app defaults to `https://maati-web.onrender.com`. If Render assigns another hostname, set `MAATI_WEB_URL` for the local packaging process or update `PRODUCTION_WEB_URL` in `frontend/main.js`, then rebuild. Before distributing the installer, publish it from a stable HTTPS release location and sign it with the project's code-signing certificate.
+The installer is written to `frontend/release/` and is ignored by Git. The desktop app defaults to `https://maati-web-g4er.onrender.com`. If Render assigns another hostname, set `MAATI_WEB_URL` for the local packaging process or update `PRODUCTION_WEB_URL` in `frontend/main.js`, then rebuild. Before distributing the installer, publish it from a stable HTTPS release location and sign it with the project's code-signing certificate.

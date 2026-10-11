@@ -6,7 +6,7 @@ const path = require('node:path');
 const WIDGET_WIDTH = 400;
 const WIDGET_HEIGHT = 600;
 const DEVELOPMENT_WEB_URL = 'http://localhost:3001';
-const PRODUCTION_WEB_URL = process.env.MAATI_WEB_URL || 'https://maati-web.onrender.com';
+const PRODUCTION_WEB_URL = process.env.MAATI_WEB_URL || 'https://maati-web-g4er.onrender.com';
 const IDLE_THRESHOLD_SECONDS = 60;
 const TRACKER_TICK_MS = 1000;
 const SAVE_EVERY_MS = 10_000;
@@ -36,6 +36,16 @@ function appPageUrl(route = '/') {
 function openDesktopLink(link) {
   if (link !== 'maati://open') return;
   focusWidgetWindow();
+}
+
+function registerProtocolClient() {
+  // `electron .` needs the app directory in the registered command. Without
+  // it Windows treats maati://open as a path to an Electron app.
+  if (process.defaultApp && process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('maati', process.execPath, [path.resolve(process.argv[1])]);
+    return;
+  }
+  app.setAsDefaultProtocolClient('maati');
 }
 
 function secureWindow(window) {
@@ -336,7 +346,7 @@ ipcMain.handle('profile:open', (_event, route) => openProfileWindow(route));
 
 app.whenReady().then(() => {
   if (!hasSingleInstance) return;
-  app.setAsDefaultProtocolClient('maati');
+  registerProtocolClient();
   const startupLink = process.argv.find(argument => argument.startsWith('maati://'));
   startScreenTimeTracker();
   createWidgetWindow();
