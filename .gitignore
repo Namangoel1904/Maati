@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+/node_modules/
+/archive/
+/Project_Maati_Complete_Session_Transcript.docx
+backend/.env
+backend/node_modules/
+backend/ai/__pycache__/
+backend/ai/.venv/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/dist/
+**/*.py[cod]

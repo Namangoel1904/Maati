@@ -1,0 +1,55 @@
+services:
+  - type: web
+    name: maati-api
+    runtime: node
+    region: ohio
+    plan: 0.5c-512mb
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: BACKBOARD_API_KEY
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: PREDICTOR_HOSTPORT
+        fromService:
+          name: maati-predictor
+          type: pserv
+          property: hostport
+
+  - type: pserv
+    name: maati-predictor
+    runtime: python
+    region: ohio
+    rootDir: backend
+    plan: 2c-8g
+    buildCommand: pip install -r ai/requirements.txt
+    startCommand: gunicorn --workers 1 --threads 1 --bind 0.0.0.0:$PORT ai.tabpfn_predictor:app
+    envVars:
+      - key: TABPFN_TOKEN
+        sync: false
+
+  - type: web
+    name: maati-web
+    runtime: node
+    region: ohio
+    plan: 0.5c-512mb
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MAATI_BACKEND_URL
+        fromService:
+          name: maati-api
+          type: web
+          property: hostport
